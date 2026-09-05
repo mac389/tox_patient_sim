@@ -1,8 +1,6 @@
-"""Context-aware synthetic poisoned-patient simulation."""
-
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -37,13 +35,7 @@ class _Context:
 
 
 def load_model_data(model_data_dir: str | Path | None = None) -> ModelData:
-    """Load model YAML data from a directory or packaged resources.
-
-    When *model_data_dir* is omitted, data is resolved via
-    :mod:`importlib.resources`, so the result is independent of the current
-    working directory. Installations without packaged clinical data receive an
-    actionable error that explains how to supply it.
-    """
+    """Load model YAML data from a directory or packaged resources."""
     if model_data_dir is None:
         root = resources.files("toxsim").joinpath("data", "model")
         source = "packaged toxsim model data"
@@ -77,33 +69,45 @@ def load_model_data(model_data_dir: str | Path | None = None) -> ModelData:
             )
         score = _load_yaml_mapping(score_path)
         if "criteria" not in score or "values" not in score:
-            raise ModelDataError(
-                f"{score_path} must define 'criteria' and 'values'."
-            )
+            raise ModelDataError(f"{score_path} must define 'criteria' and 'values'.")
         scores[name] = score
 
     return ModelData(tuple(predictive_variables), scores)
 
 
 def create_patient(
-    model_data: ModelData,
+    predictive_variables: ModelData | Sequence[Mapping[str, Any]] | None = None,
+    scores: Mapping[str, Mapping[str, Any]] | None = None,
     *,
+    model_data: ModelData | None = None,
+    model_data_dir: str | Path | None = None,
     seed: int | None = None,
     rng: np.random.Generator | None = None,
 ) -> dict[str, Any]:
     """Create one context-aware synthetic patient.
 
-    Supply either *seed* or *rng*, not both. Passing a seed makes all generated
-    fields, including the patient ID, deterministic.
+    With no model arguments, bundled model data is loaded lazily. To provide
+    custom data, pass either *model_data*, *model_data_dir*, or both
+    *predictive_variables* and *scores*. Passing a :class:`ModelData` as the
+    first positional argument is retained for compatibility.
+
+    Supply either *seed* or *rng*, not both. A seed makes all generated fields,
+    including the patient ID, deterministic.
     """
+    resolved_model_data = _resolve_model_data(
+        predictive_variables=predictive_variables,
+        scores=scores,
+        model_data=model_data,
+        model_data_dir=model_data_dir,
+    )
     generator = _resolve_rng(seed, rng)
-    variables = _variables_by_name(model_data)
+    variables = _variables_by_name(resolved_model_data)
     order = _generation_order(variables)
 
     for _ in range(10):
         context = _Context()
         presentation = [
-            _create_feature(variables[name], context, model_data.scores, generator)
+            _create_feature(variables[name], context, resolved_model_data.scores, generator)
             for name in order
         ]
         if _plausible(context, generator):
@@ -133,17 +137,30 @@ def create_patient(
 
 
 def create_patients(
-    model_data: ModelData,
-    count: int,
+    model_data: ModelData | None = None,
+    count: int = 1,
     *,
+    predictive_variables: Sequence[Mapping[str, Any]] | None = None,
+    scores: Mapping[str, Mapping[str, Any]] | None = None,
+    model_data_dir: str | Path | None = None,
     seed: int | None = None,
     rng: np.random.Generator | None = None,
 ) -> list[dict[str, Any]]:
-    """Create *count* patients, using a shared deterministic generator if seeded."""
+    """Create *count* patients using bundled or explicitly supplied model data.
+
+    The model source arguments have the same behavior as :func:`create_patient`.
+    Supplying *model_data* positionally remains compatible with earlier releases.
+    """
     if count < 0:
         raise ValueError("count must be non-negative.")
+    resolved_model_data = _resolve_model_data(
+        predictive_variables=predictive_variables,
+        scores=scores,
+        model_data=model_data,
+        model_data_dir=model_data_dir,
+    )
     generator = _resolve_rng(seed, rng)
-    return [create_patient(model_data, rng=generator) for _ in range(count)]
+    return [create_patient(resolved_model_data, rng=generator) for _ in range(count)]
 
 
 def score_from_value(value: Any, score_table: Mapping[str, Any]) -> int:
@@ -188,16 +205,57 @@ def _resolve_rng(
     return rng if rng is not None else np.random.default_rng(seed)
 
 
+def _resolve_model_data(
+    *,
+    predictive_variables: ModelData | Sequence[Mapping[str, Any]] | None,
+    scores: Mapping[str, Mapping[str, Any]] | None,
+    model_data: ModelData | None,
+    model_data_dir: str | Path | None,
+) -> ModelData:
+    has_explicit_tables = predictive_variables is not None or scores is not None
+    if model_data is not None:
+        if has_explicit_tables or model_data_dir is not None:
+            raise ModelDataError(
+                "Pass only one model source: model_data, model_data_dir, or "
+                "predictive_variables with scores."
+            )
+        return model_data
+    if isinstance(predictive_variables, ModelData):
+        if scores is not None or model_data_dir is not None:
+            raise ModelDataError(
+                "A positional ModelData cannot be combined with scores or model_data_dir."
+            )
+        return predictive_variables
+    if has_explicit_tables:
+        if model_data_dir is not None:
+            raise ModelDataError(
+                "Pass either model_data_dir or predictive_variables with scores, not both."
+            )
+        if predictive_variables is None or scores is None:
+            raise ModelDataError(
+                "Explicit model data requires both predictive_variables and scores."
+            )
+        return ModelData(
+            tuple(dict(variable) for variable in predictive_variables),
+            {name: dict(score) for name, score in scores.items()},
+        )
+    return load_model_data(model_data_dir)
+
+
 def _variables_by_name(model_data: ModelData) -> dict[str, dict[str, Any]]:
     variables: dict[str, dict[str, Any]] = {}
     for variable in model_data.predictive_variables:
         name = variable.get("name")
         if not isinstance(name, str) or not name:
-            raise ModelDataError("Every predictive variable must have a non-empty string name.")
+            raise ModelDataError(
+                "Every predictive variable must have a non-empty string name."
+            )
         if name in variables:
             raise ModelDataError(f"Duplicate predictive variable name: {name}.")
         if name not in model_data.scores:
-            raise ModelDataError(f"No score table was supplied for predictive variable {name}.")
+            raise ModelDataError(
+                f"No score table was supplied for predictive variable {name}."
+            )
         variables[name] = variable
     return variables
 
@@ -257,7 +315,12 @@ def _simulate_value_with_context(
         return value, None
     if name == "age":
         bounds = variable["allowed_values"]
-        value = int(round(int(bounds["min"]) + rng.beta(2.2, 3.0) * (int(bounds["max"]) - int(bounds["min"]))))
+        value = int(
+            round(
+                int(bounds["min"])
+                + rng.beta(2.2, 3.0) * (int(bounds["max"]) - int(bounds["min"]))
+            )
+        )
         return value, value
 
     if context.severity is None and context.intoxicant is not None:
@@ -279,7 +342,11 @@ def _simulate_value_with_context(
         return value, None
     if name == "hr":
         true_value = _sample_hr_true(
-            intoxicant, severity, context.dysrhythmia or "No", context.respiratory or "No", rng
+            intoxicant,
+            severity,
+            context.dysrhythmia or "No",
+            context.respiratory or "No",
+            rng,
         )
         value = int(true_value)
         context.hr_true = value
@@ -351,7 +418,9 @@ def _sample_gcs_from_bins(
     return int(rng.integers(int(selected["min"]), int(selected["max"]) + 1))
 
 
-def _sample_respiratory(gcs: int, intoxicant: str, severity: int, rng: np.random.Generator) -> str:
+def _sample_respiratory(
+    gcs: int, intoxicant: str, severity: int, rng: np.random.Generator
+) -> str:
     probability = 0.05 + 0.07 * severity
     if gcs <= 8:
         probability += 0.45
@@ -364,7 +433,9 @@ def _sample_respiratory(gcs: int, intoxicant: str, severity: int, rng: np.random
     return "Yes" if rng.random() < min(probability, 0.95) else "No"
 
 
-def _sample_dysrhythmia(intoxicant: str, severity: int, rng: np.random.Generator) -> str:
+def _sample_dysrhythmia(
+    intoxicant: str, severity: int, rng: np.random.Generator
+) -> str:
     probability = 0.06 + 0.06 * severity
     if intoxicant in {"Antidepressant", "Street Drugs", "CO, As, CN"}:
         probability += 0.10
@@ -374,7 +445,11 @@ def _sample_dysrhythmia(intoxicant: str, severity: int, rng: np.random.Generator
 
 
 def _sample_hr_true(
-    intoxicant: str, severity: int, dysrhythmia: str, respiratory: str, rng: np.random.Generator
+    intoxicant: str,
+    severity: int,
+    dysrhythmia: str,
+    respiratory: str,
+    rng: np.random.Generator,
 ) -> int:
     abnormal_mean = {
         "Street Drugs": 145,
@@ -388,11 +463,15 @@ def _sample_hr_true(
         probability += 0.20
     if respiratory == "Yes":
         probability += 0.10
-    mean, deviation = (abnormal_mean, 28) if rng.random() < min(probability, 0.90) else (85, 12)
+    mean, deviation = (
+        (abnormal_mean, 28) if rng.random() < min(probability, 0.90) else (85, 12)
+    )
     return int(round(np.clip(rng.normal(mean, deviation), 40, 250)))
 
 
-def _sample_sbp_true(intoxicant: str, severity: int, hr: int, rng: np.random.Generator) -> int:
+def _sample_sbp_true(
+    intoxicant: str, severity: int, hr: int, rng: np.random.Generator
+) -> int:
     mean = 125.0
     if intoxicant == "Street Drugs":
         mean += 18
@@ -407,7 +486,12 @@ def _sample_sbp_true(intoxicant: str, severity: int, hr: int, rng: np.random.Gen
 
 
 def _plausible(context: _Context, rng: np.random.Generator) -> bool:
-    if context.gcs is None or context.respiratory is None or context.hr_true is None or context.sbp_true is None:
+    if (
+        context.gcs is None
+        or context.respiratory is None
+        or context.hr_true is None
+        or context.sbp_true is None
+    ):
         return True
     if context.gcs <= 6 and context.respiratory == "No":
         return bool(rng.random() < 0.25)
@@ -418,7 +502,9 @@ def _plausible(context: _Context, rng: np.random.Generator) -> bool:
     return True
 
 
-def _truncnorm_int(low: float, high: float, mean: float, deviation: float, rng: np.random.Generator) -> int:
+def _truncnorm_int(
+    low: float, high: float, mean: float, deviation: float, rng: np.random.Generator
+) -> int:
     deviation = max(deviation, 1e-6)
     value = truncnorm.rvs(
         (low - mean) / deviation,
@@ -434,8 +520,15 @@ def _weighted_choice(
     options: Sequence[Any], probabilities: Sequence[float], rng: np.random.Generator
 ) -> Any:
     weights = np.asarray(probabilities, dtype=float)
-    if len(options) != len(weights) or not len(options) or np.any(weights < 0) or weights.sum() <= 0:
-        raise ValueError("Options and non-negative probabilities with a positive sum are required.")
+    if (
+        len(options) != len(weights)
+        or not len(options)
+        or np.any(weights < 0)
+        or weights.sum() <= 0
+    ):
+        raise ValueError(
+            "Options and non-negative probabilities with a positive sum are required."
+        )
     index = rng.choice(len(options), p=weights / weights.sum())
     return options[int(index)]
 

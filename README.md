@@ -36,17 +36,24 @@ one `<variable-name>_score.yml` file for every predictive variable.
 ## Python API
 
 ```python
-from toxsim import create_patients, load_model_data
+from toxsim import create_patient, create_patients
 
-model = load_model_data()
-patients = create_patients(model, count=100, seed=2026)
+patient = create_patient(seed=2026)
+patients = create_patients(count=100, seed=2026)
 ```
 
-`create_patient(model, seed=...)` creates one patient. A seed produces the same
-patient data across runs, including the generated patient ID. Each presentation
-entry has `name`, `value`, and `score`; continuous variables also include the
-model range and whether its underlying value was within that range. The
-patient-level `risk` equals the sum of presentation scores.
+Both functions lazily load the bundled model data by default. A seed produces
+the same patient data across runs, including the generated patient ID. Each
+presentation entry has `name`, `value`, and `score`; continuous variables also
+include the model range and whether its underlying value was within that range.
+The patient-level `risk` equals the sum of presentation scores.
+
+To use a compatible external model directory, pass
+`model_data_dir="/path/to/model-data"`. Advanced callers can use
+`create_patient(predictive_variables=variables, scores=score_tables)` or load
+once with `model = load_model_data(...)` and pass that `ModelData` object as
+the first argument to `create_patient(model)` or `create_patients(model,
+count=100)`.
 
 ## CLI
 

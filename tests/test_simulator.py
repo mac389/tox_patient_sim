@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib import resources
+
 import pytest
 
 from toxsim import ModelDataError, create_patient, create_patients, load_model_data
@@ -30,9 +32,32 @@ def test_missing_override_data_has_actionable_error(tmp_path):
 
 def test_seeded_generation_is_deterministic():
     model_data = load_model_data()
+    assert create_patient(seed=42) == create_patient(seed=42)
     assert create_patient(model_data, seed=42) == create_patient(model_data, seed=42)
     assert create_patients(model_data, 3, seed=42) == create_patients(model_data, 3, seed=42)
     assert create_patient(model_data, seed=42) != create_patient(model_data, seed=43)
+
+
+def test_create_patient_supports_explicit_model_data_sources():
+    model_data = load_model_data()
+    expected = create_patient(model_data, seed=8)
+
+    assert create_patient(
+        predictive_variables=model_data.predictive_variables,
+        scores=model_data.scores,
+        seed=8,
+    ) == expected
+    model_directory = resources.files("toxsim").joinpath("data", "model")
+    assert create_patient(model_data_dir=str(model_directory), seed=8) == expected
+
+
+def test_create_patient_rejects_incomplete_or_conflicting_model_sources():
+    model_data = load_model_data()
+
+    with pytest.raises(ModelDataError, match="both predictive_variables and scores"):
+        create_patient(predictive_variables=model_data.predictive_variables)
+    with pytest.raises(ModelDataError, match="only one model source"):
+        create_patient(model_data=model_data, model_data_dir="custom-model-data")
 
 
 def test_patient_scores_and_continuous_output_invariants():
