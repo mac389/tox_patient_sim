@@ -30,6 +30,7 @@ toxsim-generate = "toxsim.generate:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/toxsim"]
+include = ["src/toxsim/data/**/*.yml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

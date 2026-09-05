@@ -1,0 +1,7 @@
+- "@context": https://schema.org
+  "@id": https://w3.org/yaml-ld/
+  "@type": WebContent
+  name: YAML-LD
+  author:
+  "@id": https://www.w3.org/community/json-ld
+  name: JSON-LD Community Group

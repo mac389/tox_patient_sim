@@ -1,0 +1,26 @@
+criteria: categorical
+values:
+  - name: Alcohol
+    score: -5
+    representation: Alcohol
+  - name: Analgesic
+    score: 1
+    representation: Analgesic
+  - name: Antidepressant
+    score: 0
+    representation: Antidepressant
+  - name: Street Drugs
+    score: 1
+    representation: Street Drugs
+  - name: Sedatives
+    score: -1
+    representation: Sedatives
+  - name: "CO, As, CN"
+    score: -6
+    representation: "CO, As, CN"
+  - name: Toxins NOS
+    score: 2
+    representation: Toxins NOS
+  - name: Polysubstance
+    score: 0
+    representation: Polysubstance

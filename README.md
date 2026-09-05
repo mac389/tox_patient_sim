@@ -15,27 +15,30 @@ python -m pip install "toxsim[cli]"
 
 ## Model data
 
-The clinical model configuration is intentionally separate from the Python
-package. The required YAML files from the upstream project are ignored by that
-project and were not available to package:
+The package includes the canonical clinical model configuration as package
+data, including `predictive_variables.yml`, each variable's score file, and
+`model.schema.yml`. `load_model_data()` uses these resources by default and
+never depends on the current working directory.
 
 ```text
-model-data/
+toxsim/data/
+  model.schema.yml
+  model/
   predictive_variables.yml
   <variable-name>_score.yml
 ```
 
-Pass this directory to `load_model_data()` or `toxsim-generate
---model-data-dir`. If an installed distribution contains model data in a future
-release, `load_model_data()` uses it automatically through package resources;
-it never depends on the current working directory.
+Pass a directory to `load_model_data()` or `toxsim-generate
+--model-data-dir` to override the bundled model with a compatible
+configuration. An override directory contains `predictive_variables.yml` and
+one `<variable-name>_score.yml` file for every predictive variable.
 
 ## Python API
 
 ```python
 from toxsim import create_patients, load_model_data
 
-model = load_model_data("/path/to/model-data")
+model = load_model_data()
 patients = create_patients(model, count=100, seed=2026)
 ```
 
@@ -52,9 +55,9 @@ toxsim-generate \
   --count 1000 \
   --destination ./generated \
   --format both \
-  --seed 2026 \
-  --model-data-dir /path/to/model-data
+  --seed 2026
 ```
 
 `--format` accepts `json`, `jsonl`, or `both` (the default). JSON output is
-written as `patients.json`; JSONL output is written as `patients.jsonl`.
+written as `patients.json`; JSONL output is written as `patients.jsonl`. Add
+`--model-data-dir /path/to/model-data` to use a compatible override.

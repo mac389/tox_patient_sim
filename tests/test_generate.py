@@ -5,14 +5,7 @@ import json
 from toxsim.generate import main
 
 
-def test_cli_writes_json_and_jsonl(model_data, tmp_path):
-    model_directory = tmp_path / "model"
-    model_directory.mkdir()
-    # The fixture data lives in tmp_path, so use a copied fixture directory for
-    # a destination that does not overlap with input.
-    for path in tmp_path.glob("*.yml"):
-        path.rename(model_directory / path.name)
-
+def test_cli_writes_json_and_jsonl(tmp_path):
     destination = tmp_path / "output"
     assert main(
         [
@@ -24,8 +17,6 @@ def test_cli_writes_json_and_jsonl(model_data, tmp_path):
             "both",
             "--seed",
             "11",
-            "--model-data-dir",
-            str(model_directory),
         ]
     ) == 0
 

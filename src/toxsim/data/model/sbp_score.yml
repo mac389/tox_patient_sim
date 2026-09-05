@@ -1,0 +1,32 @@
+criteria: range
+values:
+  - name: "<=140"
+    score: -3
+    representation: "$\\geq$ 140"
+    min: 140
+    max: 999
+  - name: 130-140
+    score: -1
+    representation: "130-140"
+    min: 130
+    max: 139
+  - name: 120-130
+    score: 0
+    representation: "120-130"
+    min: 120
+    max: 129
+  - name: 110-120
+    score: 1
+    representation: "110-120"
+    min: 110
+    max: 119
+  - name: 100-110
+    score: 2
+    representation: "100-110"
+    min: 100
+    max: 109
+  - name: <100"
+    score: 4
+    representation: "$<100$"
+    min: 0
+    max: 99

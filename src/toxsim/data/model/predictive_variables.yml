@@ -1,0 +1,89 @@
+- name: intoxicant 
+  repr: Exposure Category
+  type: categorical
+  allowed_values:
+    - Alcohol
+    - Analgesic
+    - Antidepressant
+    - Street Drugs
+    - Sedatives
+    - "CO, As, CN"
+    - Toxins NOS
+    - Polysubstance
+- name: age
+  type: continuous
+  allowed_values: 
+    min: 12
+    max: 100
+- name: sbp
+  repr: Systolic Blood Pressure
+  type: continuous
+  allowed_values:
+    min: 100
+    max: 140
+- name: hr
+  repr: Heart Rate
+  type: continuous
+  allowed_values:
+    min: 60
+    max: 200
+- name: gcs
+  type: categorical
+  allowed_values:
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+- name: second_diagnose
+  repr: Other Reason for ICU Admission
+  type: categorical
+  dist:
+    - value: No
+      probability: 0.7
+    - value: Yes
+      probability: 0.3
+  allowed_values:
+    - No
+    - Yes
+- name: cirrhosis
+  repr: History of Cirrhosis
+  type: categorical
+  allowed_values:
+    - No
+    - Yes
+  dist:
+    - value: No
+      probability: 0.9
+    - value: Yes
+      probability: 0.1
+- name: dysrhythmia
+  repr: Dysrhythmia
+  type: categorical
+  dist:
+    - value: No
+      probability: 0.8
+    - value: Yes
+      probability: 0.2
+  allowed_values:
+    - No
+    - Yes
+- name: respiratory
+  repr: Respiratory Failure
+  dist:
+    - value: No
+      probability: 0.6
+    - value: Yes
+      probability: 0.4
+  type: categorical
+  allowed_values:
+    - No
+    - Yes

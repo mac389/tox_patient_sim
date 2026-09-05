@@ -1,0 +1,32 @@
+criteria: range
+values:
+  - name: "<25"
+    representation: "<25"
+    min: 0
+    max: 24
+    score: 0
+  - name: "25-35"
+    representation: "25-35"
+    min: 25
+    max: 34
+    score: 2
+  - name: "35-45"
+    representation: "35-45"
+    min: 35
+    max: 44
+    score: 4
+  - name: "45-55"
+    representation: "45-55"
+    min: 45
+    max: 54
+    score: 6
+  - name: "55-65"
+    representation: "55-65"
+    min: 55
+    max: 64
+    score: 8
+  - name: ">65"
+    representation: '$\geq$ 65'
+    min: 65
+    max: 100
+    score: 10

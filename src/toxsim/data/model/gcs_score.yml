@@ -1,0 +1,22 @@
+criteria: range
+values:
+  - name: $\geq 14$
+    representation: ">= 14"
+    min: 14
+    max: 15
+    score: 0
+  - name: 9-14
+    representation: "9-14"
+    min: 9
+    max: 13
+    score: 3
+  - name: 6-9
+    representation: "6-9"
+    min: 7
+    max: 8
+    score: 6
+  - name: "<6"
+    representation: "$\\leq 6$"
+    min: 0
+    max: 6
+    score: 9

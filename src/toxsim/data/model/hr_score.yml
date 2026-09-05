@@ -1,0 +1,27 @@
+criteria: range
+values:
+  - name: "<75"
+    representation: $<75$
+    min: 20
+    max: 74
+    score: 0
+  - name: "75-85"
+    representation: $75-85$
+    min: 75
+    max: 84
+    score: 1
+  - name: "85-95"
+    representation: $85-95$
+    min: 85
+    max: 94
+    score: 2
+  - name: "95-105"
+    representation: $95-105$
+    min: 95
+    max: 104
+    score: 3
+  - name: "<105"
+    representation: $\geq 105$
+    min: 105
+    max: 300
+    score: 4
