@@ -27,3 +27,12 @@ def test_cli_writes_json_and_jsonl(tmp_path):
     ]
     assert json_patients == jsonl_patients
     assert len(json_patients) == 2
+
+
+def test_cli_writes_output_file_and_infers_jsonl_format(tmp_path):
+    output = tmp_path / "patients.jsonl"
+
+    assert main(["--count", "2", "--output", str(output), "--seed", "11"]) == 0
+
+    patients = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
+    assert len(patients) == 2

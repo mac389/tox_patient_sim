@@ -52,12 +52,13 @@ patient-level `risk` equals the sum of presentation scores.
 
 ```shell
 toxsim-generate \
-  --count 1000 \
-  --destination ./generated \
-  --format both \
+  --count 100 \
+  --output patients.jsonl \
   --seed 2026
 ```
 
-`--format` accepts `json`, `jsonl`, or `both` (the default). JSON output is
-written as `patients.json`; JSONL output is written as `patients.jsonl`. Add
-`--model-data-dir /path/to/model-data` to use a compatible override.
+`--output` writes one file and infers the format from its `.json` or `.jsonl`
+suffix. To generate named default files in a directory instead, use
+`--destination ./generated --format both`; `--format` accepts `json`, `jsonl`,
+or `both` (the default). Add `--model-data-dir /path/to/model-data` to use a
+compatible override.
